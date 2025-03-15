@@ -1,10 +1,13 @@
 // ==UserScript==
 // @name         VTuberSchedules Filter!
+// @namespace    http://tampermonkey.net/
 // @version      0.7
 // @description  Filter out specific VTubers from vtuberschedules.com
-// @author       oh-ari
+// @author       Ari
 // @match        https://vtuberschedules.com/*
 // @grant        GM_addStyle
+// @updateURL    https://github.com/oh-ari/vtuberfilter/raw/refs/heads/main/vtuberfilter.user.js
+// @downloadURL  https://github.com/oh-ari/vtuberfilter/raw/refs/heads/main/vtuberfilter.user.js
 // ==/UserScript==
 
 (function() {

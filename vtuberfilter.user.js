@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VTuberSchedules Filter!
 // @namespace    http://tampermonkey.net/
-// @version      0.9.5
+// @version      0.7
 // @description  Filter out specific VTubers from vtuberschedules.com
 // @author       Ari
 // @match        https://vtuberschedules.com/*
@@ -398,8 +398,8 @@
         isPickMode = enable;
         const pickButton = document.getElementById('pick-vtuber');
         pickButton.classList.toggle('active', isPickMode);
-
-        // Toggle pickable class on stream cards and quick links
+        
+        // Toggle pickable class on stream cards and quick links.
         document.querySelectorAll('.stream-card-container, .quick-link-wrapper').forEach(element => {
             if (!blockedVTubers.includes(getVTuberName(element)?.toLowerCase())) {
                 element.classList.toggle('pickable', isPickMode);
@@ -408,14 +408,14 @@
     }
 
     function getVTuberName(element) {
-        // Try to get name from quick link
+        // Try to get name from quick link.
         const quickLinkName = element.querySelector('.quick-link-streamer-name')?.getAttribute('title');
         if (quickLinkName) return quickLinkName;
-
-        // Try to get name from stream card
+        
+        // Try to get name from stream card.
         const streamCardName = element.querySelector('.stream-card-title')?.textContent;
         if (streamCardName) return streamCardName.trim();
-
+        
         return null;
     }
 
@@ -466,7 +466,7 @@
             blockedVTubers,
             isDarkMode
         };
-
+        
         const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -511,13 +511,13 @@
         }
     });
 
-    // Add pick button handler
+    // Add pick button handler.
     document.getElementById('pick-vtuber').addEventListener('click', (e) => {
         e.stopPropagation();
         togglePickMode(!isPickMode);
     });
 
-    // Add click handlers for pickable elements
+    // Add click handlers for pickable elements.
     document.addEventListener('click', (e) => {
         if (!isPickMode) return;
 
@@ -563,9 +563,11 @@
     document.addEventListener('click', (e) => {
         const isClickInsideFilter = controlsDiv.contains(e.target);
         const isClickOnButton = toggleButton.contains(e.target);
-
-        if (!isClickInsideFilter && !isClickOnButton && controlsDiv.classList.contains('visible')) {
+        const isPickModeClick = isPickMode && (e.target.closest('.stream-card-container') || e.target.closest('.quick-link-wrapper'));
+        
+        if (!isClickInsideFilter && !isClickOnButton && !isPickModeClick && controlsDiv.classList.contains('visible')) {
             controlsDiv.classList.remove('visible');
+            togglePickMode(false); // Disable pick mode when closing panel, whoops.
         }
     });
 
@@ -577,4 +579,4 @@
     updateTheme();
     updateBlockedList();
     filterStreams();
-})();
+})(); 

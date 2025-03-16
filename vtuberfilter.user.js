@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VTuberSchedules Filter!
 // @namespace    http://tampermonkey.net/
-// @version      0.9
+// @version      0.9.5
 // @description  Filter out specific VTubers from vtuberschedules.com
 // @author       Ari
 // @match        https://vtuberschedules.com/*
@@ -133,7 +133,7 @@
         }
 
         #vtuber-name-input {
-            width: calc(100% - 24px);
+            width: calc(100% - 70px);
             padding: 10px 12px;
             border: 1px solid var(--filter-input-bg);
             border-radius: 6px;
@@ -147,6 +147,64 @@
         #vtuber-name-input:focus {
             outline: none;
             border-color: var(--filter-button-bg);
+        }
+
+        #pick-vtuber {
+            width: 40px;
+            padding: 8px;
+            background: var(--filter-item-bg);
+            color: var(--filter-text);
+            border: 1px solid var(--filter-border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s ease;
+            margin: 15px 0 10px 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #pick-vtuber:hover {
+            background: var(--filter-button-bg);
+            color: var(--filter-button-text);
+        }
+
+        #pick-vtuber.active {
+            background: var(--filter-button-bg);
+            color: var(--filter-button-text);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .pickable {
+            position: relative;
+            cursor: pointer !important;
+        }
+
+        .pickable::after {
+            content: '➕';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: white;
+            background: rgba(145, 70, 255, 0.9);
+            padding: 15px;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+        }
+
+        .pickable:hover::after {
+            opacity: 1;
         }
 
         #add-vtuber {
@@ -269,10 +327,11 @@
             <h3 class="filter-title">▶ VTuber Filter</h3>
             <button id="theme-toggle">🌓</button>
         </div>
-        <div>
+        <div style="display: flex;">
             <input type="text" id="vtuber-name-input" placeholder="Enter VTuber name">
-            <button id="add-vtuber">Add to filter</button>
+            <button id="pick-vtuber" title="Click to enable VTuber selection mode">⊘</button>
         </div>
+        <button id="add-vtuber">Add to filter</button>
         <div id="blocked-vtubers-list"></div>
         <div class="settings-buttons">
             <button id="export-settings" class="settings-button">Export Settings</button>
@@ -333,6 +392,33 @@
         });
     }
 
+    let isPickMode = false;
+
+    function togglePickMode(enable) {
+        isPickMode = enable;
+        const pickButton = document.getElementById('pick-vtuber');
+        pickButton.classList.toggle('active', isPickMode);
+
+        // Toggle pickable class on stream cards and quick links
+        document.querySelectorAll('.stream-card-container, .quick-link-wrapper').forEach(element => {
+            if (!blockedVTubers.includes(getVTuberName(element)?.toLowerCase())) {
+                element.classList.toggle('pickable', isPickMode);
+            }
+        });
+    }
+
+    function getVTuberName(element) {
+        // Try to get name from quick link
+        const quickLinkName = element.querySelector('.quick-link-streamer-name')?.getAttribute('title');
+        if (quickLinkName) return quickLinkName;
+
+        // Try to get name from stream card
+        const streamCardName = element.querySelector('.stream-card-title')?.textContent;
+        if (streamCardName) return streamCardName.trim();
+
+        return null;
+    }
+
     // Event handlers.
     toggleButton.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -380,7 +466,7 @@
             blockedVTubers,
             isDarkMode
         };
-        
+
         const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -425,6 +511,36 @@
         }
     });
 
+    // Add pick button handler
+    document.getElementById('pick-vtuber').addEventListener('click', (e) => {
+        e.stopPropagation();
+        togglePickMode(!isPickMode);
+    });
+
+    // Add click handlers for pickable elements
+    document.addEventListener('click', (e) => {
+        if (!isPickMode) return;
+
+        const streamCard = e.target.closest('.stream-card-container');
+        const quickLink = e.target.closest('.quick-link-wrapper');
+        const target = streamCard || quickLink;
+
+        if (target && target.classList.contains('pickable')) {
+            const name = getVTuberName(target);
+            if (name) {
+                const nameLower = name.toLowerCase();
+                if (!blockedVTubers.includes(nameLower)) {
+                    blockedVTubers.push(nameLower);
+                    updateBlockedList();
+                    filterStreams();
+                    target.classList.remove('pickable');
+                }
+            }
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    });
+
     // Watch for new streams being added.
     const observer = new MutationObserver(filterStreams);
     observer.observe(document.body, { childList: true, subtree: true });
@@ -447,7 +563,7 @@
     document.addEventListener('click', (e) => {
         const isClickInsideFilter = controlsDiv.contains(e.target);
         const isClickOnButton = toggleButton.contains(e.target);
-        
+
         if (!isClickInsideFilter && !isClickOnButton && controlsDiv.classList.contains('visible')) {
             controlsDiv.classList.remove('visible');
         }
@@ -461,4 +577,4 @@
     updateTheme();
     updateBlockedList();
     filterStreams();
-})(); 
+})();

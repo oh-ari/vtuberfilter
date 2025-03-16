@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VTuberSchedules Filter!
 // @namespace    http://tampermonkey.net/
-// @version      0.7
+// @version      0.8
 // @description  Filter out specific VTubers from vtuberschedules.com
 // @author       Ari
 // @match        https://vtuberschedules.com/*
@@ -273,6 +273,7 @@
     }
 
     function filterStreams() {
+        // Filter main stream cards.
         const streamCards = document.querySelectorAll('.stream-card-container');
         streamCards.forEach(card => {
             const titleElement = card.querySelector('.stream-card-title');
@@ -280,6 +281,20 @@
                 card.style.display = 'none';
             } else {
                 card.style.display = '';
+            }
+        });
+
+        // Filter quick links panel (Currently Live and Upcoming).
+        const quickLinks = document.querySelectorAll('.quick-link-wrapper');
+        quickLinks.forEach(link => {
+            const nameElement = link.querySelector('.quick-link-streamer-name');
+            if (nameElement) {
+                const name = nameElement.getAttribute('title').toLowerCase();
+                if (blockedVTubers.includes(name)) {
+                    link.closest('.ng-star-inserted').style.display = 'none';
+                } else {
+                    link.closest('.ng-star-inserted').style.display = '';
+                }
             }
         });
     }
@@ -346,7 +361,7 @@
     document.addEventListener('click', (e) => {
         const isClickInsideFilter = controlsDiv.contains(e.target);
         const isClickOnButton = toggleButton.contains(e.target);
-        
+
         if (!isClickInsideFilter && !isClickOnButton && controlsDiv.classList.contains('visible')) {
             controlsDiv.classList.remove('visible');
         }
@@ -360,4 +375,4 @@
     updateTheme();
     updateBlockedList();
     filterStreams();
-})(); 
+})();

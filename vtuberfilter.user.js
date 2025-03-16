@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VTuberSchedules Filter!
 // @namespace    http://tampermonkey.net/
-// @version      0.8
+// @version      0.9
 // @description  Filter out specific VTubers from vtuberschedules.com
 // @author       Ari
 // @match        https://vtuberschedules.com/*
@@ -231,6 +231,35 @@
             transform: rotate(15deg);
             opacity: 1;
         }
+
+        .settings-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid var(--filter-border);
+        }
+
+        .settings-button {
+            flex: 1;
+            padding: 8px;
+            background: var(--filter-item-bg);
+            color: var(--filter-text);
+            border: 1px solid var(--filter-border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .settings-button:hover {
+            background: var(--filter-button-bg);
+            color: var(--filter-button-text);
+        }
+
+        #import-file {
+            display: none;
+        }
     `);
 
     const controlsDiv = document.createElement('div');
@@ -245,6 +274,11 @@
             <button id="add-vtuber">Add to filter</button>
         </div>
         <div id="blocked-vtubers-list"></div>
+        <div class="settings-buttons">
+            <button id="export-settings" class="settings-button">Export Settings</button>
+            <input type="file" id="import-file" accept=".json">
+            <button id="import-settings" class="settings-button">Import Settings</button>
+        </div>
     `;
 
     const toggleButton = document.createElement('button');
@@ -339,6 +373,58 @@
         }
     });
 
+    // Export settings handler.
+    document.getElementById('export-settings').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const settings = {
+            blockedVTubers,
+            isDarkMode
+        };
+        
+        const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'vtuber-filter-settings.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+
+    // Import settings handler.
+    document.getElementById('import-settings').addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('import-file').click();
+    });
+
+    document.getElementById('import-file').addEventListener('change', (e) => {
+        e.stopPropagation();
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const settings = JSON.parse(event.target.result);
+                    if (settings.blockedVTubers && Array.isArray(settings.blockedVTubers)) {
+                        blockedVTubers = settings.blockedVTubers;
+                        localStorage.setItem('blockedVTubers', JSON.stringify(blockedVTubers));
+                    }
+                    if (typeof settings.isDarkMode === 'boolean') {
+                        isDarkMode = settings.isDarkMode;
+                        localStorage.setItem('vtuberFilterDarkMode', JSON.stringify(isDarkMode));
+                    }
+                    updateTheme();
+                    updateBlockedList();
+                    filterStreams();
+                } catch (error) {
+                    console.error('Failed to import settings:', error);
+                }
+            };
+            reader.readAsText(file);
+        }
+    });
+
     // Watch for new streams being added.
     const observer = new MutationObserver(filterStreams);
     observer.observe(document.body, { childList: true, subtree: true });
@@ -361,7 +447,7 @@
     document.addEventListener('click', (e) => {
         const isClickInsideFilter = controlsDiv.contains(e.target);
         const isClickOnButton = toggleButton.contains(e.target);
-
+        
         if (!isClickInsideFilter && !isClickOnButton && controlsDiv.classList.contains('visible')) {
             controlsDiv.classList.remove('visible');
         }
@@ -375,4 +461,4 @@
     updateTheme();
     updateBlockedList();
     filterStreams();
-})();
+})(); 

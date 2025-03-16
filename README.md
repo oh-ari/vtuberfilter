@@ -1,5 +1,6 @@
 # VTuberSchedules Filter!
-![image](https://github.com/user-attachments/assets/89356e06-d8df-442e-9463-ee0c1d4f1eaf)
+![image](https://github.com/user-attachments/assets/6e968c3b-ee07-4e07-adb4-233cfc8bb887)
+
 
 A simple userscript to hide or block VTubers you aren't a fan of. Your preferences are stored locally, and the UI is designed to fit in with the site seamlessly.
 
@@ -14,6 +15,8 @@ A simple userscript to hide or block VTubers you aren't a fan of. Your preferenc
 - Semi-integrated with VTuberSchedules.com.
 
 - Easily export and import your hide list to another browser.
+
+- Click to hide if you feel too lazy to type!
 
 ### Installing
 

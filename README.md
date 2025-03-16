@@ -1,21 +1,55 @@
 # VTuberSchedules Filter!
 ![image](https://github.com/user-attachments/assets/26f56f7c-547a-4a64-bb7c-cfb200c7d99e)
 
+A simple userscript to hide or block VTubers you aren't a fan of. Your preferences are stored locally, and the UI is designed to fit in with the site seamlessly.
 
-A nice and simple userscript to allow you to hide/block VTubers you aren't a fan of. All your preferences are stored locally and I've done my best to make it look nice too and semi-fitting of the site.
+### Features
 
-### Instructions
-1. Install TamperMonkey (or GreaseMonkey)
-2. Get the script from [here](https://github.com/oh-ari/vtuberfilter/blob/main/vtuberfilter.user.js)!
-3. Either 'Create New Script' or open your dashboard on your chosen script handler.
-  - Click the '+' button on the Dashboard to enable the new script process stuff.
-4. Paste the script into it and save.
-5. Open VTuberSchedules.com and you should have a new button in the top right.
-6. ???
-7. Profit!
+- Locally stored preferences.
 
-If you click the 'Raw' button when viewing the script source, it generally will open up TamperMonkey's 'Add Script' thing to make it easier.
+- Clean and intuitive UI.
 
-Any updates will be auto-downloaded, if you don't want that, feel free to just remove the @updateURL and @downloadURL!
+- Simply type the VTuber to hide and done!
 
-Any suggestions, post something in 'issues' and I'll sort it.
+- Semi-integrated with VTuberSchedules.com.
+
+### Installing
+
+#### Step 1: Install a Userscript Manager
+
+You need a userscript manager such as:
+
+- TamperMonkey
+
+- GreaseMonkey
+
+#### Step 2: Get the Script
+
+Just click here:
+[vtuberfilter.user.js](https://github.com/oh-ari/vtuberfilter/blob/main/vtuberfilter.user.js)
+
+#### Step 3: Install the Script
+
+1. Open your userscript manager dashboard.
+
+2. Click + to create a new script.
+
+3. Paste the copied script.
+
+4. Save the script.
+
+Alternatively, clicking the Raw button on GitHub usually opens TamperMonkey’s ‘Add Script’ prompt, making installation even easier.
+
+#### Step 4: Enjoy!
+
+Open VTuberSchedules.com.
+
+A new button should appear in the top-right corner.
+
+Use it to customize your filters.
+
+### Updates
+
+Updates will be automatically downloaded.
+
+If you prefer to disable auto-updates, just remove the @updateURL and @downloadURL lines from the script.

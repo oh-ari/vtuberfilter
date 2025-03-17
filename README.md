@@ -54,6 +54,14 @@ A new button should appear in the top-right corner.
 
 Use it to customize your filters.
 
+### Discord Webhooks
+
+You should read [Discord's page on Webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) if you're unsure how to make one.
+
+Once you do though, simply copy the Webhook URL into the input on the UI and save it and add some streamers you're interested in.
+
+As long as the tab is open, you'll recieve notifications in Discord. You can use the "Background" button so the tab stays active in the background while you do other things.
+
 ### Updates
 
 Updates will be automatically downloaded.

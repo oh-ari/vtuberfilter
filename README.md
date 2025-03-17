@@ -1,6 +1,5 @@
 # VTuberSchedules Filter!
-![image](https://github.com/user-attachments/assets/6e968c3b-ee07-4e07-adb4-233cfc8bb887)
-
+![vtuberfilter](https://github.com/user-attachments/assets/b5ee7344-8486-4879-8d3e-ac82d33cc36d)
 
 A simple userscript to hide or block VTubers you aren't a fan of. Your preferences are stored locally, and the UI is designed to fit in with the site seamlessly.
 
@@ -17,6 +16,8 @@ A simple userscript to hide or block VTubers you aren't a fan of. Your preferenc
 - Easily export and import your hide list to another browser.
 
 - Click to hide if you feel too lazy to type!
+
+- Discord Webhook integration for notifications on your favourite streamers. (All stored locally!)
 
 ### Installing
 

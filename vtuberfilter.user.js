@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VTuberSchedules Filter!
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      0.9
 // @description  Filter out specific VTubers from vtuberschedules.com and get Discord notifications for upcoming streams.
 // @author       Ari
 // @match        https://vtuberschedules.com/*
@@ -729,7 +729,7 @@
         isPickMode = enable;
         const pickButton = document.getElementById('pick-vtuber');
         pickButton.classList.toggle('active', isPickMode);
-        
+
         // Toggle pickable class on stream cards and quick links.
         document.querySelectorAll('.stream-card-container, .quick-link-wrapper').forEach(element => {
             if (!blockedVTubers.includes(getVTuberName(element)?.toLowerCase())) {
@@ -742,10 +742,10 @@
         // Extract VTuber name from quick link or stream card.
         const quickLinkName = element.querySelector('.quick-link-streamer-name')?.getAttribute('title');
         if (quickLinkName) return quickLinkName;
-        
+
         const streamCardName = element.querySelector('.stream-card-title')?.textContent;
         if (streamCardName) return streamCardName.trim();
-        
+
         return null;
     }
 
@@ -800,7 +800,7 @@
             isBackgroundMode,
             notifiedStreams
         };
-        
+
         const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -911,8 +911,8 @@
         });
     });
 
-    observer.observe(document.body, { 
-        childList: true, 
+    observer.observe(document.body, {
+        childList: true,
         subtree: true,
         attributes: true,
         attributeFilter: ['data-theme']
@@ -937,7 +937,7 @@
         const isClickInsideFilter = controlsDiv.contains(e.target);
         const isClickOnButton = toggleButton.contains(e.target);
         const isPickModeClick = isPickMode && (e.target.closest('.stream-card-container') || e.target.closest('.quick-link-wrapper'));
-        
+
         if (!isClickInsideFilter && !isClickOnButton && !isPickModeClick && controlsDiv.classList.contains('visible')) {
             controlsDiv.classList.remove('visible');
             togglePickMode(false); // Disable pick mode when closing panel, whoops.
@@ -957,6 +957,15 @@
             </div>
         `).join('');
         storage.set('notifyVTubers', notifyVTubers);
+
+        listDiv.querySelectorAll('.remove-notify').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const name = button.dataset.name;
+                notifyVTubers = notifyVTubers.filter(v => v !== name);
+                updateNotifyList();
+            });
+        });
     }
 
     // Add background mode toggle handler
@@ -984,11 +993,11 @@
         const now = new Date().getTime();
         const nextCheck = lastCheckTime ? lastCheckTime + (5 * 60 * 1000) : now;
         const timeLeft = Math.max(0, nextCheck - now);
-        
+
         const minutes = Math.floor(timeLeft / 60000);
         const seconds = Math.floor((timeLeft % 60000) / 1000);
-        
-        document.getElementById('next-check').textContent = 
+
+        document.getElementById('next-check').textContent =
             `Next check in: ${minutes}:${seconds.toString().padStart(2, '0')}`;
 
         if (timeLeft > 0) {
@@ -1002,9 +1011,9 @@
         // Parse time string and convert to Unix timestamp.
         const [time, period] = timeStr.split(' ');
         const [hours, minutes] = time.split(':').map(Number);
-        
+
         const date = new Date();
-        
+
         if (period === 'PM' && hours !== 12) {
             date.setHours(hours + 12);
         }
@@ -1014,7 +1023,7 @@
         else {
             date.setHours(hours);
         }
-        
+
         date.setMinutes(minutes);
         date.setSeconds(0);
         date.setMilliseconds(0);
@@ -1036,7 +1045,7 @@
             // Fetch streams from page or background.
             const quickLinksSelector = '.quick-link-wrapper';
             let upcomingStreams;
-            
+
             if (isBackgroundMode && document.hidden) {
                 const response = await fetch('https://vtuberschedules.com/');
                 const html = await response.text();
@@ -1049,23 +1058,23 @@
 
             const now = new Date().getTime();
             let notificationSent = false;
-            
+
             const seenStreams = new Set();
 
             for (const stream of upcomingStreams) {
                 const nameElement = stream.querySelector('.quick-link-streamer-name');
                 const timeElement = stream.querySelector('.quick-link-stream-info-line span b');
                 const streamLink = stream.closest('a')?.href;
-                
+
                 if (!nameElement || !timeElement || !streamLink) continue;
 
                 const vtuberName = nameElement.textContent.trim();
                 const streamTime = timeElement.textContent.trim();
-                
+
                 if (!notifyVTubers.includes(vtuberName.toLowerCase())) continue;
 
                 const streamKey = `${vtuberName}-${streamTime}-${streamLink}`;
-                
+
                 if (seenStreams.has(streamKey)) continue;
                 seenStreams.add(streamKey);
 
@@ -1092,10 +1101,10 @@
                         });
 
                         notifiedStreams.push(streamId);
-                        
+
                         const sevenDaysAgo = new Date();
                         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                        
+
                         notifiedStreams = notifiedStreams.filter(streamJson => {
                             try {
                                 const stream = JSON.parse(streamJson);
@@ -1106,9 +1115,9 @@
                         });
 
                         storage.set('notifiedStreams', notifiedStreams);
-                        
+
                         notificationSent = true;
-                        document.getElementById('last-notification').textContent = 
+                        document.getElementById('last-notification').textContent =
                             `Last notification: ${vtuberName} at ${new Date().toLocaleTimeString()}`;
                     } catch (error) {
                         console.error('Failed to send Discord notification:', error);
@@ -1117,7 +1126,7 @@
             }
 
             if (!notificationSent) {
-                document.getElementById('last-notification').textContent = 
+                document.getElementById('last-notification').textContent =
                     `Last check: ${new Date().toLocaleTimeString()} (No new streams)`;
             }
         } catch (error) {
@@ -1255,10 +1264,10 @@
     updateBlockedList();
     filterStreams();
     updateNotifyList();
-    
+
     if (isBackgroundMode) {
         startBackgroundMode();
         // Check immediately on page load, testing purposes that I'll probably leave here.
         checkUpcomingStreams();
     }
-})(); 
+})();

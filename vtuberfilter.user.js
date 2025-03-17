@@ -937,10 +937,12 @@
         const isClickInsideFilter = controlsDiv.contains(e.target);
         const isClickOnButton = toggleButton.contains(e.target);
         const isPickModeClick = isPickMode && (e.target.closest('.stream-card-container') || e.target.closest('.quick-link-wrapper'));
+        const isNotifyPickModeClick = isNotifyPickMode && (e.target.closest('.stream-card-container') || e.target.closest('.quick-link-wrapper'));
 
-        if (!isClickInsideFilter && !isClickOnButton && !isPickModeClick && controlsDiv.classList.contains('visible')) {
+        if (!isClickInsideFilter && !isClickOnButton && !isPickModeClick && !isNotifyPickModeClick && controlsDiv.classList.contains('visible')) {
             controlsDiv.classList.remove('visible');
-            togglePickMode(false); // Disable pick mode when closing panel, whoops.
+            togglePickMode(false);
+            toggleNotifyPickMode(false);
         }
     });
 
@@ -968,7 +970,7 @@
         });
     }
 
-    // Add background mode toggle handler
+    // Add background mode toggle handler.
     document.getElementById('background-mode-toggle').addEventListener('click', () => {
         isBackgroundMode = !isBackgroundMode;
         storage.set('vtuberFilterBackgroundMode', JSON.stringify(isBackgroundMode));

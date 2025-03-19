@@ -1,0 +1,19 @@
+{
+  "blockedVTubers": [
+    "vtuber1",
+    "vtuber2",
+    "vtuber3"
+  ],
+  "isDarkMode": true,
+  "notifyVTubers": [
+    "vtuber4",
+    "vtuber5",
+    "vtuber6"
+  ],
+  "discordWebhook": "https://discord.com/api/...",
+  "isBackgroundMode": true,
+  "notifiedStreams": [
+    "{\"name\":\"vtuber7\",\"time\":\"3:00 PM\",\"url\":\"https://youtube.com\",\"date\":\"2023-05-15\"}",
+    "{\"name\":\"vtuber8\",\"time\":\"8:30 PM\",\"url\":\"https://youtube.com\",\"date\":\"2023-05-16\"}"
+  ]
+}

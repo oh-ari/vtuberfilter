@@ -19,6 +19,8 @@ A simple userscript to hide or block VTubers you aren't a fan of. Your preferenc
 
 - Discord Webhook integration for notifications on your favourite streamers. (All stored locally!)
 
+![image](https://github.com/user-attachments/assets/0684215b-4776-4961-91f4-389d24cb1c20)
+
 ### Installing
 
 #### Step 1: Install a Userscript Manager

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VTuberSchedules Filter!
 // @namespace    http://tampermonkey.net/
-// @version      1.1.10
+// @version      1.1.12
 // @description  Filter out specific VTubers from vtuberschedules.com and get Discord notifications for upcoming streams.
 // @author       Ari
 // @match        https://vtuberschedules.com/*
@@ -637,7 +637,7 @@
             pointer-events: none;
             overflow: hidden !important;
         }
-        
+
         @keyframes popIn {
             0% { transform: scale(0); opacity: 0; }
             70% { transform: scale(1.1); opacity: 0.7; }
@@ -695,23 +695,23 @@
             0%, 100% { opacity: 0.2; }
             50% { opacity: 1; }
         }
-        
+
         @keyframes pulseBorder {
-            0% { 
+            0% {
                 box-shadow: 0 0 8px 2px rgba(255, 215, 0, 0.4);
             }
-            50% { 
+            50% {
                 box-shadow: 0 0 15px 5px rgba(255, 215, 0, 0.7);
             }
-            100% { 
+            100% {
                 box-shadow: 0 0 8px 2px rgba(255, 215, 0, 0.4);
             }
         }
-        
+
         .mat-mdc-card {
             transition: border-color 0.6s ease-in-out;
         }
-        
+
         .golden-border {
             animation: pulseBorder 1.5s ease-in-out infinite;
             border-color: gold !important;
@@ -800,20 +800,54 @@
         const streamCards = document.querySelectorAll('.stream-card-container');
         streamCards.forEach(card => {
             const titleElement = card.querySelector('.stream-card-title');
-            if (titleElement && blockedVTubers.includes(titleElement.textContent.trim().toLowerCase())) {
-                if (!isInitialLoad && !skipAnimations && card.style.display !== 'none' && !card.classList.contains('popping-out')) {
-                    card.classList.add('popping-out');
-                    setTimeout(() => {
+            if (titleElement) {
+                const rawName = titleElement.innerText;
+                const vtuberName = rawName.replace('🔔 ', '').trim().toLowerCase();
+
+                if (blockedVTubers.includes(vtuberName)) {
+                    if (!isInitialLoad && !skipAnimations && card.style.display !== 'none' && !card.classList.contains('popping-out')) {
+                        card.classList.add('popping-out');
+                        setTimeout(() => {
+                            card.style.display = 'none';
+                            card.classList.remove('popping-out');
+                        }, 550);
+                    } else {
                         card.style.display = 'none';
                         card.classList.remove('popping-out');
-                    }, 550);
+                    }
                 } else {
-                    card.style.display = 'none';
+                    card.style.display = '';
                     card.classList.remove('popping-out');
+
+                    const bellElement = titleElement.querySelector('.notify-bell');
+                    if (notifyVTubers.includes(vtuberName) && !bellElement) {
+                        const bell = document.createElement('span');
+                        bell.className = 'notify-bell';
+                        bell.textContent = '🔔 ';
+                        bell.style.opacity = '0';
+                        titleElement.insertBefore(bell, titleElement.firstChild);
+
+                        if (!isInitialLoad && !skipAnimations) {
+                            setTimeout(() => {
+                                bell.classList.add('popping-in');
+                                bell.style.opacity = '1';
+                            }, 10);
+                        } else {
+                            bell.style.opacity = '1';
+                        }
+                    } else if (!notifyVTubers.includes(vtuberName) && bellElement) {
+                        if (!skipAnimations) {
+                            bellElement.classList.add('popping-out');
+                            setTimeout(() => {
+                                if (titleElement.contains(bellElement)) {
+                                    titleElement.removeChild(bellElement);
+                                }
+                            }, 550);
+                        } else {
+                            titleElement.removeChild(bellElement);
+                        }
+                    }
                 }
-            } else {
-                card.style.display = '';
-                card.classList.remove('popping-out');
             }
         });
 
@@ -821,10 +855,10 @@
         quickLinks.forEach(link => {
             const nameElement = link.querySelector('.quick-link-streamer-name');
             if (nameElement) {
-                const name = nameElement.getAttribute('title').toLowerCase();
+                const vtuberName = nameElement.getAttribute('title').toLowerCase();
                 const parentElement = link.closest('.ng-star-inserted');
 
-                if (blockedVTubers.includes(name)) {
+                if (blockedVTubers.includes(vtuberName)) {
                     if (!isInitialLoad && !skipAnimations && parentElement.style.display !== 'none' && !parentElement.classList.contains('popping-out')) {
                         parentElement.classList.add('popping-out');
                         setTimeout(() => {
@@ -838,6 +872,35 @@
                 } else {
                     parentElement.style.display = '';
                     parentElement.classList.remove('popping-out');
+
+                    const bellElement = nameElement.querySelector('.notify-bell');
+                    if (notifyVTubers.includes(vtuberName) && !bellElement) {
+                        const bell = document.createElement('span');
+                        bell.className = 'notify-bell';
+                        bell.textContent = '🔔 ';
+                        bell.style.opacity = '0';
+                        nameElement.insertBefore(bell, nameElement.firstChild);
+
+                        if (!isInitialLoad && !skipAnimations) {
+                            setTimeout(() => {
+                                bell.classList.add('popping-in');
+                                bell.style.opacity = '1';
+                            }, 10);
+                        } else {
+                            bell.style.opacity = '1';
+                        }
+                    } else if (!notifyVTubers.includes(vtuberName) && bellElement) {
+                        if (!skipAnimations) {
+                            bellElement.classList.add('popping-out');
+                            setTimeout(() => {
+                                if (nameElement.contains(bellElement)) {
+                                    nameElement.removeChild(bellElement);
+                                }
+                            }, 550);
+                        } else {
+                            nameElement.removeChild(bellElement);
+                        }
+                    }
                 }
             }
         });
@@ -850,7 +913,7 @@
     }
 
     function blockVTuber(name, element = null) {
-        const nameLower = name.toLowerCase();
+        const nameLower = name.replace('🔔 ', '').toLowerCase();
 
         if (!blockedVTubers.includes(nameLower)) {
             if (element) {
@@ -871,24 +934,24 @@
     }
 
     function addVTuberToNotify(name, element = null) {
-        const nameLower = name.toLowerCase();
+        const nameLower = name.replace('🔔 ', '').toLowerCase();
 
         if (!notifyVTubers.includes(nameLower)) {
             notifyVTubers.push(nameLower);
             updateNotifyList();
 
             if (element) {
-                const targetElement = element.closest('.quick-link-wrapper') ? 
+                const targetElement = element.closest('.quick-link-wrapper') ?
                     element.closest('.ng-star-inserted') : element;
 
                 targetElement.classList.add('star-animation');
-                
+
                 const cardElement = targetElement.querySelector('.mat-mdc-card') || targetElement;
-                
+
                 const originalBorderColor = window.getComputedStyle(cardElement).borderColor;
-                
+
                 cardElement.classList.add('golden-border');
-                
+
                 setTimeout(() => {
                     if (cardElement && cardElement.classList.contains('golden-border')) {
                         cardElement.classList.remove('golden-border');
@@ -897,7 +960,7 @@
                         }, 10);
                     }
                 }, 3000);
-                
+
                 const starCount = 15;
                 const rect = targetElement.getBoundingClientRect();
                 const starSymbols = ['✦', '★', '☆', '✧', '✫', '✬'];
@@ -975,8 +1038,8 @@
         const quickLinkName = element.querySelector('.quick-link-streamer-name')?.getAttribute('title');
         if (quickLinkName) return quickLinkName;
 
-        const streamCardName = element.querySelector('.stream-card-title')?.textContent;
-        if (streamCardName) return streamCardName.trim();
+        const streamCardName = element.querySelector('.stream-card-title')?.innerText;
+        if (streamCardName) return streamCardName.replace('🔔 ', '').trim();
 
         return null;
     }
@@ -1266,6 +1329,9 @@
         `).join('');
 
         storage.set('notifyVTubers', notifyVTubers);
+
+        skipAnimations = false;
+        filterStreams();
     }
 
     // Add background mode toggle handler.

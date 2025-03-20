@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VTuberSchedules Filter!
 // @namespace    http://tampermonkey.net/
-// @version      0.9
+// @version      1.0.4
 // @description  Filter out specific VTubers from vtuberschedules.com and get Discord notifications for upcoming streams.
 // @author       Ari
 // @match        https://vtuberschedules.com/*
@@ -1074,6 +1074,8 @@
                 const streamTime = timeElement.textContent.trim();
                 
                 if (!notifyVTubers.includes(vtuberName.toLowerCase())) continue;
+
+                // Create a more unique stream key to prevent overlapping notifications
                 const streamKey = `${vtuberName.toLowerCase()}-${streamTime}-${streamLink}`;
                 
                 if (seenStreams.has(streamKey)) continue;
@@ -1135,14 +1137,33 @@
         }
     }
 
+    function handleInactivityPrompt() {
+        const resumeBtn = document.querySelector('.inactivity-prompt .resume-btn');
+        if (resumeBtn) {
+            console.log("Inactivity detected, resuming.");
+            resumeBtn.click();
+            return true;
+        }
+        return false;
+    }
+
     function startBackgroundMode() {
         // Create hidden iframe to keep page active in background.
         const iframe = document.createElement('iframe');
         iframe.style.display = 'none';
         iframe.src = 'https://vtuberschedules.com/';
         document.body.appendChild(iframe);
-
         window.vtuberFilterIframe = iframe;
+
+        // Check for inactivity prompt every 5 minutes.
+        window.vtuberFilterInactivityChecker = setInterval(() => {
+            try {
+                handleInactivityPrompt();
+            } catch (e) {
+                console.error("Inactivity checker error:", e);
+            }
+        }, 300000);
+
         window.vtuberFilterInterval = setInterval(checkUpcomingStreams, 5 * 60 * 1000);
         document.addEventListener('visibilitychange', handleVisibilityChange);
 
@@ -1155,6 +1176,11 @@
         if (window.vtuberFilterIframe) {
             window.vtuberFilterIframe.remove();
             window.vtuberFilterIframe = null;
+        }
+        
+        if (window.vtuberFilterInactivityChecker) {
+            clearInterval(window.vtuberFilterInactivityChecker);
+            window.vtuberFilterInactivityChecker = null;
         }
 
         if (window.vtuberFilterInterval) {
@@ -1177,6 +1203,7 @@
                 startBackgroundMode();
             }
         } else {
+            handleInactivityPrompt();
             checkUpcomingStreams();
         }
     }
@@ -1268,7 +1295,6 @@
     
     if (isBackgroundMode) {
         startBackgroundMode();
-        // Check immediately on page load, testing purposes that I'll probably leave here.
         checkUpcomingStreams();
     }
 })(); 

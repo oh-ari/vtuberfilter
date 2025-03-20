@@ -69,3 +69,7 @@ As long as the tab is open, you'll recieve notifications in Discord. You can use
 Updates will be automatically downloaded.
 
 If you prefer to disable auto-updates, just remove the @updateURL and @downloadURL lines from the script.
+
+### Known Issues
+
+- If a stream is delayed on YouTube, then an additional Webhook notification will be sent.

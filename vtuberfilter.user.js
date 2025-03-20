@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VTuberSchedules Filter!
 // @namespace    http://tampermonkey.net/
-// @version      1.0.4
+// @version      1.1.10
 // @description  Filter out specific VTubers from vtuberschedules.com and get Discord notifications for upcoming streams.
 // @author       Ari
 // @match        https://vtuberschedules.com/*
@@ -283,7 +283,6 @@
             pointer-events: none;
         }
 
-        /* Smaller size for quick links */
         .quick-link-wrapper.pickable::after {
             font-size: 16px;
             padding: 8px;
@@ -599,7 +598,6 @@
             pointer-events: none;
         }
 
-        /* Smaller size for quick links */
         .quick-link-wrapper.notify-pickable::after {
             font-size: 16px;
             padding: 8px;
@@ -626,6 +624,97 @@
             color: var(--filter-text);
             opacity: 0.8;
             font-size: 12px;
+        }
+
+        @keyframes popOut {
+            0% { transform: scale(1); opacity: 1; }
+            30% { transform: scale(1.05); opacity: 0.9; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        .popping-out {
+            animation: popOut 0.5s ease-in-out forwards;
+            pointer-events: none;
+            overflow: hidden !important;
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            70% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .popping-in {
+            animation: popIn 0.5s ease forwards;
+        }
+
+        .star-animation {
+            position: relative;
+            overflow: visible;
+        }
+
+        .star {
+            position: absolute;
+            z-index: 9999;
+            color: gold;
+            font-size: 24px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            animation: starFloat 2s ease-out forwards;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.7);
+        }
+
+        .star.bright {
+            color: #FFD700;
+        }
+
+        .star.light {
+            color: #FFEC8B;
+        }
+
+        .star.subtle {
+            color: #FFDF66;
+        }
+
+        @keyframes starFloat {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) translate(0, 0) rotate(0deg);
+            }
+            10% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: scale(1.5) translate(var(--tx), var(--ty)) rotate(var(--rot));
+            }
+        }
+
+        @keyframes starTwinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+        
+        @keyframes pulseBorder {
+            0% { 
+                box-shadow: 0 0 8px 2px rgba(255, 215, 0, 0.4);
+            }
+            50% { 
+                box-shadow: 0 0 15px 5px rgba(255, 215, 0, 0.7);
+            }
+            100% { 
+                box-shadow: 0 0 8px 2px rgba(255, 215, 0, 0.4);
+            }
+        }
+        
+        .mat-mdc-card {
+            transition: border-color 0.6s ease-in-out;
+        }
+        
+        .golden-border {
+            animation: pulseBorder 1.5s ease-in-out infinite;
+            border-color: gold !important;
         }
     `);
 
@@ -671,7 +760,8 @@
             </button>
         </div>
     `;
-
+    // This project really spiralled from just a simple filter.
+    // It was *just* a filter at first and then webhooks..animations.. I love it.
     const toggleButton = document.createElement('button');
     toggleButton.id = 'toggle-filter-controls';
     toggleButton.textContent = 'Filter Settings';
@@ -697,15 +787,33 @@
         storage.set('blockedVTubers', blockedVTubers);
     }
 
+    let isInitialLoad = true;
+    let skipAnimations = false;
+    let ignoreNextMutation = false;
+
     function filterStreams() {
-        // Filter main stream cards and quick links panel.
+        if (ignoreNextMutation) {
+            ignoreNextMutation = false;
+            return;
+        }
+
         const streamCards = document.querySelectorAll('.stream-card-container');
         streamCards.forEach(card => {
             const titleElement = card.querySelector('.stream-card-title');
             if (titleElement && blockedVTubers.includes(titleElement.textContent.trim().toLowerCase())) {
-                card.style.display = 'none';
+                if (!isInitialLoad && !skipAnimations && card.style.display !== 'none' && !card.classList.contains('popping-out')) {
+                    card.classList.add('popping-out');
+                    setTimeout(() => {
+                        card.style.display = 'none';
+                        card.classList.remove('popping-out');
+                    }, 550);
+                } else {
+                    card.style.display = 'none';
+                    card.classList.remove('popping-out');
+                }
             } else {
                 card.style.display = '';
+                card.classList.remove('popping-out');
             }
         });
 
@@ -714,13 +822,135 @@
             const nameElement = link.querySelector('.quick-link-streamer-name');
             if (nameElement) {
                 const name = nameElement.getAttribute('title').toLowerCase();
+                const parentElement = link.closest('.ng-star-inserted');
+
                 if (blockedVTubers.includes(name)) {
-                    link.closest('.ng-star-inserted').style.display = 'none';
+                    if (!isInitialLoad && !skipAnimations && parentElement.style.display !== 'none' && !parentElement.classList.contains('popping-out')) {
+                        parentElement.classList.add('popping-out');
+                        setTimeout(() => {
+                            parentElement.style.display = 'none';
+                            parentElement.classList.remove('popping-out');
+                        }, 550);
+                    } else {
+                        parentElement.style.display = 'none';
+                        parentElement.classList.remove('popping-out');
+                    }
                 } else {
-                    link.closest('.ng-star-inserted').style.display = '';
+                    parentElement.style.display = '';
+                    parentElement.classList.remove('popping-out');
                 }
             }
         });
+
+        isInitialLoad = false;
+    }
+
+    function showToast(message, type = 'info') {
+        return;
+    }
+
+    function blockVTuber(name, element = null) {
+        const nameLower = name.toLowerCase();
+
+        if (!blockedVTubers.includes(nameLower)) {
+            if (element) {
+                element.classList.add('popping-out');
+                setTimeout(() => {
+                    blockedVTubers.push(nameLower);
+                    updateBlockedList();
+                    filterStreams();
+                    showToast(`Blocked ${name}`, 'block');
+                }, 550);
+            } else {
+                blockedVTubers.push(nameLower);
+                updateBlockedList();
+                filterStreams();
+                showToast(`Blocked ${name}`, 'block');
+            }
+        }
+    }
+
+    function addVTuberToNotify(name, element = null) {
+        const nameLower = name.toLowerCase();
+
+        if (!notifyVTubers.includes(nameLower)) {
+            notifyVTubers.push(nameLower);
+            updateNotifyList();
+
+            if (element) {
+                const targetElement = element.closest('.quick-link-wrapper') ? 
+                    element.closest('.ng-star-inserted') : element;
+
+                targetElement.classList.add('star-animation');
+                
+                const cardElement = targetElement.querySelector('.mat-mdc-card') || targetElement;
+                
+                const originalBorderColor = window.getComputedStyle(cardElement).borderColor;
+                
+                cardElement.classList.add('golden-border');
+                
+                setTimeout(() => {
+                    if (cardElement && cardElement.classList.contains('golden-border')) {
+                        cardElement.classList.remove('golden-border');
+                        setTimeout(() => {
+                            cardElement.style.borderColor = originalBorderColor;
+                        }, 10);
+                    }
+                }, 3000);
+                
+                const starCount = 15;
+                const rect = targetElement.getBoundingClientRect();
+                const starSymbols = ['✦', '★', '☆', '✧', '✫', '✬'];
+                const starClasses = ['bright', 'light', 'subtle'];
+
+                for (let i = 0; i < starCount; i++) {
+                    const star = document.createElement('div');
+                    const randomSymbol = starSymbols[Math.floor(Math.random() * starSymbols.length)];
+                    const randomClass = starClasses[Math.floor(Math.random() * starClasses.length)];
+
+                    star.className = `star ${randomClass}`;
+                    star.textContent = randomSymbol;
+
+                    const padding = 30;
+                    const randomX = -padding + Math.random() * (rect.width + padding * 2);
+                    const randomY = -padding + Math.random() * (rect.height + padding * 2);
+                    const tx = (Math.random() - 0.5) * 250;
+                    const ty = (Math.random() - 0.5) * 250;
+                    const rot = (Math.random() - 0.5) * 360;
+
+                    star.style.setProperty('--tx', `${tx}px`);
+                    star.style.setProperty('--ty', `${ty}px`);
+                    star.style.setProperty('--rot', `${rot}deg`);
+
+                    const size = 14 + Math.random() * 24;
+                    star.style.fontSize = `${size}px`;
+
+                    const delay = Math.random() * 0.8;
+                    star.style.animationDelay = `${delay}s`;
+
+                    if (Math.random() > 0.6) {
+                        star.style.animation = `starFloat 2s ease-out forwards, starTwinkle ${0.5 + Math.random() * 0.5}s ease-in-out infinite`;
+                    }
+
+                    star.style.left = `${randomX}px`;
+                    star.style.top = `${randomY}px`;
+
+                    targetElement.appendChild(star);
+
+                    setTimeout(() => {
+                        if (targetElement.contains(star)) {
+                            targetElement.removeChild(star);
+                        }
+                    }, 2500);
+                }
+
+                setTimeout(() => {
+                    targetElement.classList.remove('star-animation');
+                }, 3000);
+            }
+
+            showToast(`Added ${name} to notifications`, 'notify');
+        }
     }
 
     let isPickMode = false;
@@ -729,8 +959,11 @@
         isPickMode = enable;
         const pickButton = document.getElementById('pick-vtuber');
         pickButton.classList.toggle('active', isPickMode);
-        
-        // Toggle pickable class on stream cards and quick links.
+
+        if (enable && isNotifyPickMode) {
+            toggleNotifyPickMode(false);
+        }
+
         document.querySelectorAll('.stream-card-container, .quick-link-wrapper').forEach(element => {
             if (!blockedVTubers.includes(getVTuberName(element)?.toLowerCase())) {
                 element.classList.toggle('pickable', isPickMode);
@@ -739,13 +972,12 @@
     }
 
     function getVTuberName(element) {
-        // Extract VTuber name from quick link or stream card.
         const quickLinkName = element.querySelector('.quick-link-streamer-name')?.getAttribute('title');
         if (quickLinkName) return quickLinkName;
-        
+
         const streamCardName = element.querySelector('.stream-card-title')?.textContent;
         if (streamCardName) return streamCardName.trim();
-        
+
         return null;
     }
 
@@ -771,11 +1003,9 @@
 
     document.getElementById('add-vtuber').addEventListener('click', () => {
         const input = document.getElementById('vtuber-name-input');
-        const name = input.value.trim().toLowerCase();
-        if (name && !blockedVTubers.includes(name)) {
-            blockedVTubers.push(name);
-            updateBlockedList();
-            filterStreams();
+        const name = input.value.trim();
+        if (name) {
+            blockVTuber(name);
             input.value = '';
         }
     });
@@ -783,9 +1013,86 @@
     document.getElementById('blocked-vtubers-list').addEventListener('click', (e) => {
         if (e.target.classList.contains('remove-vtuber')) {
             const name = e.target.dataset.name;
-            blockedVTubers = blockedVTubers.filter(v => v !== name);
-            updateBlockedList();
-            filterStreams();
+            const element = e.target.closest('.blocked-vtuber');
+
+            if (element) {
+                element.classList.add('popping-out');
+                setTimeout(() => {
+                    blockedVTubers = blockedVTubers.filter(v => v !== name);
+                    updateBlockedList();
+
+                    ignoreNextMutation = true;
+
+                    const streamCards = document.querySelectorAll('.stream-card-container');
+                    streamCards.forEach(card => {
+                        const titleElement = card.querySelector('.stream-card-title');
+                        if (titleElement && titleElement.textContent.trim().toLowerCase() === name) {
+                            card.classList.remove('popping-out');
+
+                            card.style.display = '';
+                            card.classList.add('popping-in');
+                            setTimeout(() => {
+                                card.classList.remove('popping-in');
+                            }, 500);
+                        }
+                    });
+
+                    const quickLinks = document.querySelectorAll('.quick-link-wrapper');
+                    quickLinks.forEach(link => {
+                        const nameElement = link.querySelector('.quick-link-streamer-name');
+                        if (nameElement && nameElement.getAttribute('title').toLowerCase() === name) {
+                            const parentElement = link.closest('.ng-star-inserted');
+
+                            parentElement.classList.remove('popping-out');
+
+                            parentElement.style.display = '';
+                            parentElement.classList.add('popping-in');
+                            setTimeout(() => {
+                                parentElement.classList.remove('popping-in');
+                            }, 500);
+                        }
+                    });
+
+                    showToast(`Unblocked ${name}`, 'info');
+                }, 550);
+            } else {
+                blockedVTubers = blockedVTubers.filter(v => v !== name);
+                updateBlockedList();
+
+                ignoreNextMutation = true;
+
+                const streamCards = document.querySelectorAll('.stream-card-container');
+                streamCards.forEach(card => {
+                    const titleElement = card.querySelector('.stream-card-title');
+                    if (titleElement && titleElement.textContent.trim().toLowerCase() === name) {
+                        card.classList.remove('popping-out');
+
+                        card.style.display = '';
+                        card.classList.add('popping-in');
+                        setTimeout(() => {
+                            card.classList.remove('popping-in');
+                        }, 500);
+                    }
+                });
+
+                const quickLinks = document.querySelectorAll('.quick-link-wrapper');
+                quickLinks.forEach(link => {
+                    const nameElement = link.querySelector('.quick-link-streamer-name');
+                    if (nameElement && nameElement.getAttribute('title').toLowerCase() === name) {
+                        const parentElement = link.closest('.ng-star-inserted');
+
+                        parentElement.classList.remove('popping-out');
+
+                        parentElement.style.display = '';
+                        parentElement.classList.add('popping-in');
+                        setTimeout(() => {
+                            parentElement.classList.remove('popping-in');
+                        }, 500);
+                    }
+                });
+
+                showToast(`Unblocked ${name}`, 'info');
+            }
         }
     });
 
@@ -800,7 +1107,7 @@
             isBackgroundMode,
             notifiedStreams
         };
-        
+
         const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -887,13 +1194,8 @@
         if (target && target.classList.contains('pickable')) {
             const name = getVTuberName(target);
             if (name) {
-                const nameLower = name.toLowerCase();
-                if (!blockedVTubers.includes(nameLower)) {
-                    blockedVTubers.push(nameLower);
-                    updateBlockedList();
-                    filterStreams();
-                    target.classList.remove('pickable');
-                }
+                blockVTuber(name, target);
+                target.classList.remove('pickable');
             }
             e.preventDefault();
             e.stopPropagation();
@@ -911,8 +1213,8 @@
         });
     });
 
-    observer.observe(document.body, { 
-        childList: true, 
+    observer.observe(document.body, {
+        childList: true,
         subtree: true,
         attributes: true,
         attributeFilter: ['data-theme']
@@ -938,7 +1240,7 @@
         const isClickOnButton = toggleButton.contains(e.target);
         const isPickModeClick = isPickMode && (e.target.closest('.stream-card-container') || e.target.closest('.quick-link-wrapper'));
         const isNotifyPickModeClick = isNotifyPickMode && (e.target.closest('.stream-card-container') || e.target.closest('.quick-link-wrapper'));
-        
+
         if (!isClickInsideFilter && !isClickOnButton && !isPickModeClick && !isNotifyPickModeClick && controlsDiv.classList.contains('visible')) {
             controlsDiv.classList.remove('visible');
             togglePickMode(false);
@@ -952,22 +1254,18 @@
 
     function updateNotifyList() {
         const listDiv = document.getElementById('notify-vtubers-list');
+
+        const animatingElements = listDiv.querySelectorAll('.popping-out');
+        animatingElements.forEach(el => el.remove());
+
         listDiv.innerHTML = notifyVTubers.map(name => `
             <div class="notify-vtuber">
                 <span>${name}</span>
                 <button class="remove-notify" data-name="${name}">Remove</button>
             </div>
         `).join('');
-        storage.set('notifyVTubers', notifyVTubers);
 
-        listDiv.querySelectorAll('.remove-notify').forEach(button => {
-            button.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const name = button.dataset.name;
-                notifyVTubers = notifyVTubers.filter(v => v !== name);
-                updateNotifyList();
-            });
-        });
+        storage.set('notifyVTubers', notifyVTubers);
     }
 
     // Add background mode toggle handler.
@@ -995,11 +1293,11 @@
         const now = new Date().getTime();
         const nextCheck = lastCheckTime ? lastCheckTime + (5 * 60 * 1000) : now;
         const timeLeft = Math.max(0, nextCheck - now);
-        
+
         const minutes = Math.floor(timeLeft / 60000);
         const seconds = Math.floor((timeLeft % 60000) / 1000);
-        
-        document.getElementById('next-check').textContent = 
+
+        document.getElementById('next-check').textContent =
             `Next check in: ${minutes}:${seconds.toString().padStart(2, '0')}`;
 
         if (timeLeft > 0) {
@@ -1010,12 +1308,11 @@
     }
 
     function getStreamTimestamp(timeStr) {
-        // Parse time string and convert to Unix timestamp.
         const [time, period] = timeStr.split(' ');
         const [hours, minutes] = time.split(':').map(Number);
-        
+
         const date = new Date();
-        
+
         if (period === 'PM' && hours !== 12) {
             date.setHours(hours + 12);
         }
@@ -1025,7 +1322,7 @@
         else {
             date.setHours(hours);
         }
-        
+
         date.setMinutes(minutes);
         date.setSeconds(0);
         date.setMilliseconds(0);
@@ -1044,10 +1341,9 @@
         updateTimer();
 
         try {
-            // Fetch streams from page or background.
             const quickLinksSelector = '.quick-link-wrapper';
             let upcomingStreams;
-            
+
             if (isBackgroundMode && document.hidden) {
                 const response = await fetch('https://vtuberschedules.com/');
                 const html = await response.text();
@@ -1060,24 +1356,23 @@
 
             const now = new Date().getTime();
             let notificationSent = false;
-            
+
             const seenStreams = new Set();
 
             for (const stream of upcomingStreams) {
                 const nameElement = stream.querySelector('.quick-link-streamer-name');
                 const timeElement = stream.querySelector('.quick-link-stream-info-line span b');
                 const streamLink = stream.closest('a')?.href;
-                
+
                 if (!nameElement || !timeElement || !streamLink) continue;
 
                 const vtuberName = nameElement.getAttribute('title') || nameElement.textContent.trim();
                 const streamTime = timeElement.textContent.trim();
-                
+
                 if (!notifyVTubers.includes(vtuberName.toLowerCase())) continue;
 
-                // Create a more unique stream key to prevent overlapping notifications
                 const streamKey = `${vtuberName.toLowerCase()}-${streamTime}-${streamLink}`;
-                
+
                 if (seenStreams.has(streamKey)) continue;
                 seenStreams.add(streamKey);
 
@@ -1104,10 +1399,10 @@
                         });
 
                         notifiedStreams.push(streamId);
-                        
+
                         const sevenDaysAgo = new Date();
                         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                        
+
                         notifiedStreams = notifiedStreams.filter(streamJson => {
                             try {
                                 const stream = JSON.parse(streamJson);
@@ -1118,9 +1413,9 @@
                         });
 
                         storage.set('notifiedStreams', notifiedStreams);
-                        
+
                         notificationSent = true;
-                        document.getElementById('last-notification').textContent = 
+                        document.getElementById('last-notification').textContent =
                             `Last notification: ${vtuberName} at ${new Date().toLocaleTimeString()}`;
                     } catch (error) {
                         console.error('Failed to send Discord notification:', error);
@@ -1129,7 +1424,7 @@
             }
 
             if (!notificationSent) {
-                document.getElementById('last-notification').textContent = 
+                document.getElementById('last-notification').textContent =
                     `Last check: ${new Date().toLocaleTimeString()} (No new streams)`;
             }
         } catch (error) {
@@ -1148,14 +1443,12 @@
     }
 
     function startBackgroundMode() {
-        // Create hidden iframe to keep page active in background.
         const iframe = document.createElement('iframe');
         iframe.style.display = 'none';
         iframe.src = 'https://vtuberschedules.com/';
         document.body.appendChild(iframe);
         window.vtuberFilterIframe = iframe;
 
-        // Check for inactivity prompt every 5 minutes.
         window.vtuberFilterInactivityChecker = setInterval(() => {
             try {
                 handleInactivityPrompt();
@@ -1177,7 +1470,7 @@
             window.vtuberFilterIframe.remove();
             window.vtuberFilterIframe = null;
         }
-        
+
         if (window.vtuberFilterInactivityChecker) {
             clearInterval(window.vtuberFilterInactivityChecker);
             window.vtuberFilterInactivityChecker = null;
@@ -1220,6 +1513,11 @@
         isNotifyPickMode = enable;
         const pickButton = document.getElementById('pick-notify');
         pickButton.classList.toggle('active', isNotifyPickMode);
+
+        if (enable && isPickMode) {
+            togglePickMode(false);
+        }
+
         document.querySelectorAll('.stream-card-container, .quick-link-wrapper').forEach(element => {
             if (!notifyVTubers.includes(getVTuberName(element)?.toLowerCase())) {
                 element.classList.toggle('notify-pickable', isNotifyPickMode);
@@ -1243,12 +1541,8 @@
         if (target && target.classList.contains('notify-pickable')) {
             const name = getVTuberName(target);
             if (name) {
-                const nameLower = name.toLowerCase();
-                if (!notifyVTubers.includes(nameLower)) {
-                    notifyVTubers.push(nameLower);
-                    updateNotifyList();
-                    target.classList.remove('notify-pickable');
-                }
+                addVTuberToNotify(name, target);
+                target.classList.remove('notify-pickable');
             }
             e.preventDefault();
             e.stopPropagation();
@@ -1257,10 +1551,9 @@
 
     document.getElementById('add-notify').addEventListener('click', () => {
         const input = document.getElementById('discord-name-input');
-        const name = input.value.trim().toLowerCase();
-        if (name && !notifyVTubers.includes(name)) {
-            notifyVTubers.push(name);
-            updateNotifyList();
+        const name = input.value.trim();
+        if (name) {
+            addVTuberToNotify(name);
             input.value = '';
         }
     });
@@ -1292,9 +1585,31 @@
     updateBlockedList();
     filterStreams();
     updateNotifyList();
-    
+
     if (isBackgroundMode) {
         startBackgroundMode();
         checkUpcomingStreams();
     }
-})(); 
+
+    document.getElementById('notify-vtubers-list').addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove-notify')) {
+            const name = e.target.dataset.name;
+            const element = e.target.closest('.notify-vtuber');
+
+            if (element) {
+                element.style.overflow = 'hidden';
+                element.classList.add('popping-out');
+
+                setTimeout(() => {
+                    notifyVTubers = notifyVTubers.filter(v => v !== name);
+                    updateNotifyList();
+                    showToast(`Removed ${name} from notifications`, 'info');
+                }, 550);
+            } else {
+                notifyVTubers = notifyVTubers.filter(v => v !== name);
+                updateNotifyList();
+                showToast(`Removed ${name} from notifications`, 'info');
+            }
+        }
+    });
+})();
